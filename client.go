@@ -233,8 +233,8 @@ func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Mes
 			return nil, NewValidationError("message role must be one of: user, system, assistant")
 		}
 		
-		if len(msg.Content) > 10000 {
-			return nil, NewValidationError("content too long (max 10000 characters)")
+		if len(msg.Content) > 1000000 {
+			return nil, NewValidationError("content too long (max 1000000 characters)")
 		}
 		
 		content := strings.TrimSpace(msg.Content)
