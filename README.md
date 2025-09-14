@@ -48,14 +48,23 @@ func main() {
     client := xiangxinai.NewClient("your-api-key")
     ctx := context.Background()
 
-    // 检测单个提示词
+    // 检测用户输入
     result, err := client.CheckPrompt(ctx, "用户输入的问题")
     if err != nil {
         log.Fatal(err)
     }
-    
+
     fmt.Println(result.OverallRiskLevel) // 无风险/低风险/中风险/高风险
     fmt.Println(result.SuggestAction)     // 通过/阻断/代答
+
+    // 检测输出内容（基于上下文）
+    ctxResult, err := client.CheckResponseCtx(ctx, "教我做饭", "我可以教你做一些简单的家常菜")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Println(ctxResult.OverallRiskLevel) // 无风险
+    fmt.Println(ctxResult.SuggestAction)     // 通过
 }
 ```
 
@@ -650,6 +659,8 @@ Apache 2.0
 欢迎提交 Issue 和 Pull Request！
 
 ## 更新日志
+### v2.0.0
+- 新增 check_response_ctx(prompt, resposne)接口，与check_prompt(prmopt)配合使用，方便使用。
 
 ### v1.1.1
 - 将最大检测内容长度从10000调整到1M

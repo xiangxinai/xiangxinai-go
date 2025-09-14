@@ -21,7 +21,7 @@ const (
 	// DefaultMaxRetries 默认最大重试次数
 	DefaultMaxRetries = 3
 	// UserAgent 用户代理
-	UserAgent = "xiangxinai-go/1.1.0"
+	UserAgent = "xiangxinai-go/2.0.0"
 )
 
 // Client 象信AI安全护栏客户端 - 基于LLM的上下文感知AI安全护栏
@@ -33,12 +33,18 @@ const (
 //
 //	client := xiangxinai.NewClient("your-api-key")
 //	
-//	// 检测提示词
+//	// 检测用户输入
 //	result, err := client.CheckPrompt(context.Background(), "用户问题")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	
+//
+//	// 检测输出内容（基于上下文）
+//	result, err := client.CheckResponseCtx(context.Background(), "用户问题", "助手回答")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
 //	// 检测对话上下文
 //	messages := []*xiangxinai.Message{
 //		xiangxinai.NewMessage("user", "问题"),
@@ -120,11 +126,11 @@ func (c *Client) createSafeResponse() *GuardrailResponse {
 	}
 }
 
-// CheckPrompt 检测提示词的安全性
+// CheckPrompt 检测用户输入的安全性
 //
 // 参数:
 //   - ctx: 上下文
-//   - content: 要检测的提示词内容
+//   - content: 要检测的用户输入内容
 //
 // 返回值:
 //   - *GuardrailResponse: 检测结果，格式为:
@@ -162,26 +168,16 @@ func (c *Client) createSafeResponse() *GuardrailResponse {
 //	fmt.Println(result.SuggestAction)    // "通过"
 //	fmt.Println(result.Result.Compliance.RiskLevel) // "无风险"
 func (c *Client) CheckPrompt(ctx context.Context, content string) (*GuardrailResponse, error) {
-	return c.CheckPromptWithModel(ctx, content, DefaultModel)
-}
-
-// CheckPromptWithModel 检测提示词的安全性，指定模型
-func (c *Client) CheckPromptWithModel(ctx context.Context, content, model string) (*GuardrailResponse, error) {
 	// 如果content是空字符串，直接返回无风险
 	if strings.TrimSpace(content) == "" {
 		return c.createSafeResponse(), nil
 	}
-	
-	messages := []*Message{
-		NewMessage("user", strings.TrimSpace(content)),
+
+	requestData := map[string]string{
+		"input": strings.TrimSpace(content),
 	}
-	
-	request := &GuardrailRequest{
-		Model:    model,
-		Messages: messages,
-	}
-	
-	return c.makeRequest(ctx, "POST", "/guardrails", request)
+
+	return c.makeRequestWithData(ctx, "POST", "/guardrails/input", requestData)
 }
 
 // CheckConversation 检测对话上下文的安全性 - 上下文感知检测
@@ -267,6 +263,48 @@ func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Mes
 	return c.makeRequest(ctx, "POST", "/guardrails", request)
 }
 
+// CheckResponseCtx 检测用户输入和模型输出的安全性 - 上下文感知检测
+//
+// 这是护栏的核心功能，能够理解用户输入和模型输出的上下文进行安全检测。
+// 护栏会基于用户问题的上下文来检测模型输出是否安全合规。
+//
+// 参数:
+//   - ctx: 上下文
+//   - prompt: 用户输入的文本内容，用于让护栏理解上下文语意
+//   - response: 模型输出的文本内容，实际检测对象
+//
+// 返回值:
+//   - *GuardrailResponse: 基于上下文的检测结果，格式与CheckPrompt相同
+//   - error: 错误信息
+//
+// 可能的错误类型:
+//   - ValidationError: 输入参数无效
+//   - AuthenticationError: 认证失败
+//   - RateLimitError: 超出速率限制
+//   - XiangxinAIError: 其他API错误
+//
+// 示例:
+//
+//	result, err := client.CheckResponseCtx(ctx, "教我做饭", "我可以教你做一些简单的家常菜")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Println(result.OverallRiskLevel) // "无风险"
+//	fmt.Println(result.SuggestAction)    // "通过"
+func (c *Client) CheckResponseCtx(ctx context.Context, prompt, response string) (*GuardrailResponse, error) {
+	// 如果prompt和response都是空字符串，直接返回无风险
+	if strings.TrimSpace(prompt) == "" && strings.TrimSpace(response) == "" {
+		return c.createSafeResponse(), nil
+	}
+
+	requestData := map[string]string{
+		"input":  strings.TrimSpace(prompt),
+		"output": strings.TrimSpace(response),
+	}
+
+	return c.makeRequestWithData(ctx, "POST", "/guardrails/output", requestData)
+}
+
 // HealthCheck 检查API服务健康状态
 func (c *Client) HealthCheck(ctx context.Context) (map[string]interface{}, error) {
 	resp, err := c.client.R().
@@ -313,6 +351,11 @@ func (c *Client) GetModels(ctx context.Context) (map[string]interface{}, error) 
 
 // makeRequest 发送HTTP请求
 func (c *Client) makeRequest(ctx context.Context, method, endpoint string, requestData *GuardrailRequest) (*GuardrailResponse, error) {
+	return c.makeRequestWithData(ctx, method, endpoint, requestData)
+}
+
+// makeRequestWithData 发送HTTP请求（通用版本）
+func (c *Client) makeRequestWithData(ctx context.Context, method, endpoint string, requestData interface{}) (*GuardrailResponse, error) {
 	var lastErr error
 	
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
