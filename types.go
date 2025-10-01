@@ -2,8 +2,8 @@ package xiangxinai
 
 // Message 消息模型
 type Message struct {
-	Role    string `json:"role"`    // 消息角色: user, system, assistant
-	Content string `json:"content"` // 消息内容
+	Role    string      `json:"role"`    // 消息角色: user, system, assistant
+	Content interface{} `json:"content"` // 消息内容，可以是string或[]interface{}（多模态）
 }
 
 // NewMessage 创建新的消息

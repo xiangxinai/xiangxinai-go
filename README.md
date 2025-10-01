@@ -15,6 +15,7 @@
 - **上下文感知**: 理解完整对话上下文，而非简单的单句检测
 - **智能检测**: 基于LLM的深度语义理解
 - **双重防护**: 合规性检测 + 安全性检测
+- **多模态检测**: 支持图片内容安全检测（2.3.0新增）
 - **实时响应**: 毫秒级检测响应
 - **简单集成**: 易于集成的SDK接口
 
@@ -165,6 +166,53 @@ func main() {
             fmt.Printf("批量检测结果: %s\n", result.Result.OverallRiskLevel)
         }
     }
+}
+```
+
+### 多模态图片检测（2.3.0新增）
+
+象信AI安全护栏2.3.0版本新增了多模态检测功能，支持图片内容安全检测，可以结合提示词文本的语义和图片内容语义分析得出是否安全。
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/xiangxinai/xiangxin-guardrails/client/xiangxinai-go"
+)
+
+func main() {
+    client := xiangxinai.NewClient("your-api-key")
+    ctx := context.Background()
+
+    // 检测单张图片（本地文件）
+    result, err := client.CheckPromptImage(ctx, "这个图片安全吗？", "/path/to/image.jpg")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(result.OverallRiskLevel)
+    fmt.Println(result.SuggestAction)
+
+    // 检测单张图片（网络URL）
+    result, err = client.CheckPromptImage(ctx, "", "https://example.com/image.jpg")
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // 检测多张图片
+    images := []string{
+        "/path/to/image1.jpg",
+        "https://example.com/image2.jpg",
+        "/path/to/image3.png",
+    }
+    result, err = client.CheckPromptImages(ctx, "这些图片都安全吗？", images)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(result.OverallRiskLevel)
 }
 ```
 

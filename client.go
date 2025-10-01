@@ -2,9 +2,13 @@ package xiangxinai
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -303,6 +307,185 @@ func (c *Client) CheckResponseCtx(ctx context.Context, prompt, response string) 
 	}
 
 	return c.makeRequestWithData(ctx, "POST", "/guardrails/output", requestData)
+}
+
+// encodeBase64FromPath 将图片编码为base64格式
+func (c *Client) encodeBase64FromPath(imagePath string) (string, error) {
+	if strings.HasPrefix(imagePath, "http://") || strings.HasPrefix(imagePath, "https://") {
+		// 从URL获取图片
+		resp, err := http.Get(imagePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to fetch image from URL: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("failed to fetch image: status %d", resp.StatusCode)
+		}
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("failed to read image data: %w", err)
+		}
+
+		return base64.StdEncoding.EncodeToString(data), nil
+	}
+
+	// 从本地文件读取
+	data, err := os.ReadFile(imagePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read image file: %w", err)
+	}
+
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+// CheckPromptImage 检测文本提示词和图片的安全性 - 多模态检测
+//
+// 结合文本语义和图片内容进行安全检测。
+//
+// 参数:
+//   - ctx: 上下文
+//   - prompt: 文本提示词（可以为空）
+//   - image: 图片文件的本地路径或HTTP(S)链接（不能为空）
+//
+// 返回值:
+//   - *GuardrailResponse: 检测结果
+//   - error: 错误信息
+//
+// 示例:
+//
+//	// 检测本地图片
+//	result, err := client.CheckPromptImage(ctx, "这个图片安全吗？", "/path/to/image.jpg")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	// 检测网络图片
+//	result, err := client.CheckPromptImage(ctx, "", "https://example.com/image.jpg")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Println(result.OverallRiskLevel)
+func (c *Client) CheckPromptImage(ctx context.Context, prompt, image string) (*GuardrailResponse, error) {
+	return c.CheckPromptImageWithModel(ctx, prompt, image, "Xiangxin-Guardrails-VL")
+}
+
+// CheckPromptImageWithModel 检测文本提示词和图片的安全性，指定模型
+func (c *Client) CheckPromptImageWithModel(ctx context.Context, prompt, image, model string) (*GuardrailResponse, error) {
+	if image == "" {
+		return nil, NewValidationError("image path cannot be empty")
+	}
+
+	// 编码图片
+	imageBase64, err := c.encodeBase64FromPath(image)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, NewValidationError(fmt.Sprintf("image file not found: %s", image))
+		}
+		return nil, NewXiangxinAIError(fmt.Sprintf("failed to encode image: %v", err), err)
+	}
+
+	// 构建消息内容
+	content := []interface{}{}
+	if strings.TrimSpace(prompt) != "" {
+		content = append(content, map[string]string{
+			"type": "text",
+			"text": strings.TrimSpace(prompt),
+		})
+	}
+	content = append(content, map[string]interface{}{
+		"type": "image_url",
+		"image_url": map[string]string{
+			"url": fmt.Sprintf("data:image/jpeg;base64,%s", imageBase64),
+		},
+	})
+
+	messages := []*Message{
+		{
+			Role:    "user",
+			Content: content,
+		},
+	}
+
+	request := &GuardrailRequest{
+		Model:    model,
+		Messages: messages,
+	}
+
+	return c.makeRequest(ctx, "POST", "/guardrails", request)
+}
+
+// CheckPromptImages 检测文本提示词和多张图片的安全性 - 多模态检测
+//
+// 结合文本语义和多张图片内容进行安全检测。
+//
+// 参数:
+//   - ctx: 上下文
+//   - prompt: 文本提示词（可以为空）
+//   - images: 图片文件的本地路径或HTTP(S)链接列表（不能为空）
+//
+// 返回值:
+//   - *GuardrailResponse: 检测结果
+//   - error: 错误信息
+//
+// 示例:
+//
+//	images := []string{"/path/to/image1.jpg", "https://example.com/image2.jpg"}
+//	result, err := client.CheckPromptImages(ctx, "这些图片安全吗？", images)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	fmt.Println(result.OverallRiskLevel)
+func (c *Client) CheckPromptImages(ctx context.Context, prompt string, images []string) (*GuardrailResponse, error) {
+	return c.CheckPromptImagesWithModel(ctx, prompt, images, "Xiangxin-Guardrails-VL")
+}
+
+// CheckPromptImagesWithModel 检测文本提示词和多张图片的安全性，指定模型
+func (c *Client) CheckPromptImagesWithModel(ctx context.Context, prompt string, images []string, model string) (*GuardrailResponse, error) {
+	if len(images) == 0 {
+		return nil, NewValidationError("images list cannot be empty")
+	}
+
+	// 构建消息内容
+	content := []interface{}{}
+	if strings.TrimSpace(prompt) != "" {
+		content = append(content, map[string]string{
+			"type": "text",
+			"text": strings.TrimSpace(prompt),
+		})
+	}
+
+	// 编码所有图片
+	for _, imagePath := range images {
+		imageBase64, err := c.encodeBase64FromPath(imagePath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, NewValidationError(fmt.Sprintf("image file not found: %s", imagePath))
+			}
+			return nil, NewXiangxinAIError(fmt.Sprintf("failed to encode image %s: %v", imagePath, err), err)
+		}
+
+		content = append(content, map[string]interface{}{
+			"type": "image_url",
+			"image_url": map[string]string{
+				"url": fmt.Sprintf("data:image/jpeg;base64,%s", imageBase64),
+			},
+		})
+	}
+
+	messages := []*Message{
+		{
+			Role:    "user",
+			Content: content,
+		},
+	}
+
+	request := &GuardrailRequest{
+		Model:    model,
+		Messages: messages,
+	}
+
+	return c.makeRequest(ctx, "POST", "/guardrails", request)
 }
 
 // HealthCheck 检查API服务健康状态
