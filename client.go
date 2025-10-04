@@ -25,7 +25,7 @@ const (
 	// DefaultMaxRetries 默认最大重试次数
 	DefaultMaxRetries = 3
 	// UserAgent 用户代理
-	UserAgent = "xiangxinai-go/2.0.0"
+	UserAgent = "xiangxinai-go/2.4.0"
 )
 
 // Client 象信AI安全护栏客户端 - 基于LLM的上下文感知AI安全护栏

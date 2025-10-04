@@ -32,10 +32,17 @@ type SecurityResult struct {
 	Categories []string `json:"categories"` // 风险类别列表
 }
 
+// DataSecurityResult 数据安全检测结果
+type DataSecurityResult struct {
+	RiskLevel  string   `json:"risk_level"` // 风险等级: 无风险, 低风险, 中风险, 高风险
+	Categories []string `json:"categories"` // 敏感数据类别列表
+}
+
 // GuardrailResult 护栏检测结果
 type GuardrailResult struct {
-	Compliance *ComplianceResult `json:"compliance"` // 合规检测结果
-	Security   *SecurityResult   `json:"security"`   // 安全检测结果
+	Compliance *ComplianceResult   `json:"compliance"` // 合规检测结果
+	Security   *SecurityResult     `json:"security"`   // 安全检测结果
+	Data       *DataSecurityResult `json:"data"`       // 数据安全检测结果
 }
 
 // GuardrailResponse 护栏API响应模型
@@ -66,7 +73,7 @@ func (r *GuardrailResponse) HasSubstitute() bool {
 func (r *GuardrailResponse) GetAllCategories() []string {
 	categorySet := make(map[string]bool)
 	var categories []string
-	
+
 	if r.Result != nil {
 		if r.Result.Compliance != nil {
 			for _, category := range r.Result.Compliance.Categories {
@@ -84,8 +91,16 @@ func (r *GuardrailResponse) GetAllCategories() []string {
 				}
 			}
 		}
+		if r.Result.Data != nil {
+			for _, category := range r.Result.Data.Categories {
+				if !categorySet[category] {
+					categorySet[category] = true
+					categories = append(categories, category)
+				}
+			}
+		}
 	}
-	
+
 	return categories
 }
 

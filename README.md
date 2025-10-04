@@ -14,8 +14,8 @@
 
 - **上下文感知**: 理解完整对话上下文，而非简单的单句检测
 - **智能检测**: 基于LLM的深度语义理解
-- **双重防护**: 合规性检测 + 安全性检测
-- **多模态检测**: 支持图片内容安全检测（2.3.0新增）
+- **三重防护**: 合规性检测 + 安全性检测 + 敏感数据防泄漏
+- **多模态检测**: 支持图片内容安全检测
 - **实时响应**: 毫秒级检测响应
 - **简单集成**: 易于集成的SDK接口
 
@@ -169,9 +169,9 @@ func main() {
 }
 ```
 
-### 多模态图片检测（2.3.0新增）
+### 多模态图片检测
 
-象信AI安全护栏2.3.0版本新增了多模态检测功能，支持图片内容安全检测，可以结合提示词文本的语义和图片内容语义分析得出是否安全。
+支持多模态检测功能，支持图片内容安全检测，可以结合提示词文本的语义和图片内容语义分析得出是否安全。
 
 ```go
 package main
@@ -434,10 +434,11 @@ func (r *GuardrailResponse) GetAllCategories() []string // 获取所有风险类
 type GuardrailResult struct {
     Compliance *ComplianceResult `json:"compliance"` // 合规检测结果
     Security   *SecurityResult   `json:"security"`   // 安全检测结果
+    Data       *DataResult       `json:"data"`       // 数据防泄漏检测结果（v2.4.0新增）
 }
 ```
 
-#### ComplianceResult / SecurityResult
+#### ComplianceResult / SecurityResult / DataResult
 
 ```go
 type ComplianceResult struct {
@@ -448,6 +449,11 @@ type ComplianceResult struct {
 type SecurityResult struct {
     RiskLevel  string   `json:"risk_level"`  // 风险等级
     Categories []string `json:"categories"`  // 风险类别列表
+}
+
+type DataResult struct {
+    RiskLevel  string   `json:"risk_level"`  // 风险等级
+    Categories []string `json:"categories"`  // 检测到的敏感数据类型（v2.4.0新增）
 }
 ```
 
@@ -464,11 +470,15 @@ type SecurityResult struct {
     "security": {
       "risk_level": "无风险",           // 无风险/低风险/中风险/高风险
       "categories": []                  // 安全风险类别
+    },
+    "data": {
+      "risk_level": "无风险",           // 无风险/低风险/中风险/高风险（v2.4.0新增）
+      "categories": []                  // 检测到的敏感数据类型（v2.4.0新增）
     }
   },
   "overall_risk_level": "无风险",       // 综合风险等级
   "suggest_action": "通过",             // 通过/阻断/代答
-  "suggest_answer": null                // 建议回答（如果有）
+  "suggest_answer": null                // 建议回答（数据防泄漏时包含脱敏后内容）
 }
 ```
 
