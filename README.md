@@ -1,37 +1,40 @@
-# 象信AI安全护栏 Go SDK
+# Xiangxin AI Guardrails Go SDK
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/xiangxinai/xiangxin-guardrails/client/xiangxinai-go.svg)](https://pkg.go.dev/github.com/xiangxinai/xiangxin-guardrails/client/xiangxinai-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/xiangxinai/xiangxin-guardrails/client/xiangxinai-go)](https://goreportcard.com/report/github.com/xiangxinai/xiangxin-guardrails/client/xiangxinai-go)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-象信AI安全护栏 Go 客户端 - 基于LLM的上下文感知AI安全护栏。
+Xiangxin AI Guardrails Go Client - Context-aware AI guardrails based on LLM.
 
-## 概述
+## Overview
 
-象信AI安全护栏是一个基于大语言模型的上下文感知AI安全护栏系统，能够理解对话上下文进行智能安全检测。不同于传统的关键词匹配，我们的护栏能够理解语言的深层含义和对话的上下文关系。
+An LLM-based context-aware AI guardrail that understands conversation context for security, safety and data leakage detection.
 
-## 核心特性
+## Core Features
 
-- **上下文感知**: 理解完整对话上下文，而非简单的单句检测
-- **智能检测**: 基于LLM的深度语义理解
-- **三重防护**: 合规性检测 + 安全性检测 + 敏感数据防泄漏
-- **多模态检测**: 支持图片内容安全检测
-- **实时响应**: 毫秒级检测响应
-- **简单集成**: 易于集成的SDK接口
+- 🧠 **Context-Aware** - LLM-based conversation understanding, not just simple batch detection
+- 🔍 **Prompt Attack Detection** - Identify malicious prompt injection and jailbreak attacks
+- 📋 **Content Compliance Detection** - Meet the basic security requirements for generative AI services
+- 🔐 **Sensitive Data Leakage Prevention** - Detect and prevent personal/corporate sensitive data leaks
+- 🧩 **User-Level Ban Policies** - Support risk identification and ban policies based on user granularity
+- 🖼️ **Multimodal Detection** - Support image content safety detection
+- 🛠️ **Easy Integration** - Compatible with OpenAI API format, one-line code integration
+- ⚡ **OpenAI-style API** - Familiar interface design, quick to get started
+- 🚀 **Sync/Async Support** - Support both synchronous and asynchronous calling methods to meet different scenario requirements
 
-## 环境要求
+## Environment Requirements
 
-- Go 1.18 或更高版本
+- Go 1.18 or higher
 
-## 安装
+## Installation
 
 ```bash
 go get github.com/xiangxinai/xiangxin-guardrails/client/xiangxinai-go
 ```
 
-## 快速开始
+## Quick Start
 
-### 基本用法
+### Basic Usage
 
 ```go
 package main
@@ -45,31 +48,32 @@ import (
 )
 
 func main() {
-    // 初始化客户端
+    // Initialize client
     client := xiangxinai.NewClient("your-api-key")
     ctx := context.Background()
 
-    // 检测用户输入
-    result, err := client.CheckPrompt(ctx, "用户输入的问题")
+    // Check user input (optionally pass user ID)
+    result, err := client.CheckPrompt(ctx, "User input question", "user-123")  // user-123 is optional
     if err != nil {
         log.Fatal(err)
     }
 
-    fmt.Println(result.OverallRiskLevel) // 无风险/低风险/中风险/高风险
-    fmt.Println(result.SuggestAction)     // 通过/阻断/代答
+    fmt.Println(result.OverallRiskLevel) // no_risk/low_risk/medium_risk/high_risk
+    fmt.Println(result.SuggestAction)     // pass/reject/replace
+    fmt.Println(result.score)           // confidence score
 
-    // 检测输出内容（基于上下文）
-    ctxResult, err := client.CheckResponseCtx(ctx, "教我做饭", "我可以教你做一些简单的家常菜")
+    // Check output content (based on context)
+    ctxResult, err := client.CheckResponseCtx(ctx, "Teach me how to cook", "I can teach you some simple home-cooked dishes", "user-123")
     if err != nil {
         log.Fatal(err)
     }
 
-    fmt.Println(ctxResult.OverallRiskLevel) // 无风险
-    fmt.Println(ctxResult.SuggestAction)     // 通过
+    fmt.Println(ctxResult.OverallRiskLevel) // no_risk
+    fmt.Println(ctxResult.SuggestAction)     // pass
 }
 ```
 
-### 对话上下文检测（推荐）
+### Conversation Context Detection (Recommended)
 
 ```go
 package main
@@ -86,30 +90,30 @@ func main() {
     client := xiangxinai.NewClient("your-api-key")
     ctx := context.Background()
 
-    // 检测完整对话上下文 - 核心功能
+    // Check complete conversation context - core functionality
     messages := []*xiangxinai.Message{
-        xiangxinai.NewMessage("user", "用户的问题"),
-        xiangxinai.NewMessage("assistant", "AI助手的回答"),
-        xiangxinai.NewMessage("user", "用户的后续问题"),
+        xiangxinai.NewMessage("user", "User's question"),
+        xiangxinai.NewMessage("assistant", "AI assistant's answer"),
+        xiangxinai.NewMessage("user", "User's follow-up question"),
     }
 
-    result, err := client.CheckConversation(ctx, messages)
+    result, err := client.CheckConversation(ctx, messages, "user-123")  // user-123 is optional
     if err != nil {
         log.Fatal(err)
     }
 
-    // 检查检测结果
+    // Check detection result
     if result.IsSafe() {
-        fmt.Println("对话安全，可以继续")
+        fmt.Println("Conversation is safe, can continue")
     } else if result.IsBlocked() {
-        fmt.Println("对话存在风险，建议阻断")
+        fmt.Println("Conversation has risks, recommend blocking")
     } else if result.HasSubstitute() {
-        fmt.Printf("建议使用安全回答: %s\n", *result.SuggestAnswer)
+        fmt.Printf("Recommend using safe answer: %s\n", *result.SuggestAnswer)
     }
 }
 ```
 
-### 异步接口（推荐，性能更好）
+### Asynchronous Interface (Recommended, Better Performance)
 
 ```go
 package main
@@ -124,54 +128,54 @@ import (
 )
 
 func main() {
-    // 创建异步客户端
+    // Create async client
     asyncClient := xiangxinai.NewAsyncClient("your-api-key")
-    defer asyncClient.Close() // 记住关闭资源
+    defer asyncClient.Close() // Remember to close resources
     
     ctx := context.Background()
     
-    // 异步检测单个提示词
-    resultChan := asyncClient.CheckPromptAsync(ctx, "用户问题")
+    // Asynchronously check single prompt
+    resultChan := asyncClient.CheckPromptAsync(ctx, "User question")
     select {
     case result := <-resultChan:
         if result.Error != nil {
-            log.Printf("检测失败: %v", result.Error)
+            log.Printf("Detection failed: %v", result.Error)
         } else {
-            fmt.Printf("异步检测完成: %s\n", result.Result.OverallRiskLevel)
+            fmt.Printf("Async detection completed: %s\n", result.Result.OverallRiskLevel)
         }
     case <-time.After(5 * time.Second):
-        fmt.Println("检测超时")
+        fmt.Println("Detection timeout")
     }
     
-    // 异步对话检测
+    // Asynchronous conversation detection
     messages := []*xiangxinai.Message{
-        xiangxinai.NewMessage("user", "用户问题"),
-        xiangxinai.NewMessage("assistant", "助手回答"),
+        xiangxinai.NewMessage("user", "User question"),
+        xiangxinai.NewMessage("assistant", "Assistant answer"),
     }
     conversationChan := asyncClient.CheckConversationAsync(ctx, messages)
     result := <-conversationChan
     if result.Error != nil {
-        log.Printf("对话检测失败: %v", result.Error)
+        log.Printf("Conversation detection failed: %v", result.Error)
     } else {
-        fmt.Printf("对话检测完成: %s\n", result.Result.OverallRiskLevel)
+        fmt.Printf("Conversation detection completed: %s\n", result.Result.OverallRiskLevel)
     }
     
-    // 批量异步检测（高性能）
-    contents := []string{"内容1", "内容2", "内容3"}
+    // Batch async detection (high performance)
+    contents := []string{"Content 1", "Content 2", "Content 3"}
     batchChan := asyncClient.BatchCheckPrompts(ctx, contents)
     for result := range batchChan {
         if result.Error != nil {
-            log.Printf("批量检测失败: %v", result.Error)
+            log.Printf("Batch detection failed: %v", result.Error)
         } else {
-            fmt.Printf("批量检测结果: %s\n", result.Result.OverallRiskLevel)
+            fmt.Printf("Batch detection result: %s\n", result.Result.OverallRiskLevel)
         }
     }
 }
 ```
 
-### 多模态图片检测
+### Multimodal Image Detection
 
-支持多模态检测功能，支持图片内容安全检测，可以结合提示词文本的语义和图片内容语义分析得出是否安全。
+Supports multimodal detection functionality, supports image content safety detection, can combine prompt text semantics and image content semantic analysis to determine safety.
 
 ```go
 package main
@@ -188,27 +192,27 @@ func main() {
     client := xiangxinai.NewClient("your-api-key")
     ctx := context.Background()
 
-    // 检测单张图片（本地文件）
-    result, err := client.CheckPromptImage(ctx, "这个图片安全吗？", "/path/to/image.jpg")
+    // Check single image (local file)
+    result, err := client.CheckPromptImage(ctx, "Is this image safe?", "/path/to/image.jpg")
     if err != nil {
         log.Fatal(err)
     }
     fmt.Println(result.OverallRiskLevel)
     fmt.Println(result.SuggestAction)
 
-    // 检测单张图片（网络URL）
+    // Check single image (network URL)
     result, err = client.CheckPromptImage(ctx, "", "https://example.com/image.jpg")
     if err != nil {
         log.Fatal(err)
     }
 
-    // 检测多张图片
+    // Check multiple images
     images := []string{
         "/path/to/image1.jpg",
         "https://example.com/image2.jpg",
         "/path/to/image3.png",
     }
-    result, err = client.CheckPromptImages(ctx, "这些图片都安全吗？", images)
+    result, err = client.CheckPromptImages(ctx, "Are all these images safe?", images)
     if err != nil {
         log.Fatal(err)
     }
@@ -216,34 +220,34 @@ func main() {
 }
 ```
 
-### 自定义配置
+### Custom Configuration
 
 ```go
-// 同步客户端
+// Synchronous client
 config := &xiangxinai.ClientConfig{
     APIKey:     "your-api-key",
-    BaseURL:    "https://api.xiangxinai.cn/v1", // 可选，默认云端服务
-    Timeout:    30,  // 请求超时时间（秒），默认30
-    MaxRetries: 3,   // 最大重试次数，默认3
+    BaseURL:    "https://api.xiangxinai.cn/v1", // Optional, default cloud service
+    Timeout:    30,  // Request timeout (seconds), default 30
+    MaxRetries: 3,   // Maximum retry count, default 3
 }
 client := xiangxinai.NewClientWithConfig(config)
 
-// 异步客户端（自定义并发数）
-asyncClient := xiangxinai.NewAsyncClientWithConfig(config, 20) // 最大并发数20
+// Async client (custom concurrency)
+asyncClient := xiangxinai.NewAsyncClientWithConfig(config, 20) // Max concurrency 20
 defer asyncClient.Close()
 ```
 
-## API 参考
+## API Reference
 
-### Client（同步客户端）
+### Client (Synchronous Client)
 
-#### 创建客户端
+#### Creating Client
 
 ```go
-// 使用默认配置
+// Use default configuration
 client := xiangxinai.NewClient("your-api-key")
 
-// 使用自定义配置
+// Use custom configuration
 config := &xiangxinai.ClientConfig{
     APIKey:     "your-api-key",
     BaseURL:    "https://api.xiangxinai.cn/v1",
@@ -253,39 +257,39 @@ config := &xiangxinai.ClientConfig{
 client := xiangxinai.NewClientWithConfig(config)
 ```
 
-#### 方法
+#### Methods
 
 ##### CheckPrompt(ctx, content)
 
-检测单个提示词的安全性。
+Check safety of a single prompt.
 
 ```go
 func (c *Client) CheckPrompt(ctx context.Context, content string) (*GuardrailResponse, error)
 func (c *Client) CheckPromptWithModel(ctx context.Context, content, model string) (*GuardrailResponse, error)
 ```
 
-**参数:**
-- `ctx` (context.Context): 上下文
-- `content` (string): 要检测的内容
-- `model` (string, 可选): 模型名称，默认 "Xiangxin-Guardrails-Text"
+**Parameters:**
+- `ctx` (context.Context): Context
+- `content` (string): Content to check
+- `model` (string, optional): Model name, default "Xiangxin-Guardrails-Text"
 
 ##### CheckConversation(ctx, messages)
 
-检测对话上下文的安全性（推荐使用）。
+Check safety of conversation context (recommended).
 
 ```go
 func (c *Client) CheckConversation(ctx context.Context, messages []*Message) (*GuardrailResponse, error)
 func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Message, model string) (*GuardrailResponse, error)
 ```
 
-**参数:**
-- `ctx` (context.Context): 上下文
-- `messages` ([]*Message): 对话消息列表
-- `model` (string, 可选): 模型名称
+**Parameters:**
+- `ctx` (context.Context): Context
+- `messages` ([]*Message): Conversation message list
+- `model` (string, optional): Model name
 
 ##### HealthCheck(ctx)
 
-检查API服务健康状态。
+Check API service health status.
 
 ```go
 func (c *Client) HealthCheck(ctx context.Context) (map[string]interface{}, error)
@@ -293,64 +297,64 @@ func (c *Client) HealthCheck(ctx context.Context) (map[string]interface{}, error
 
 ##### GetModels(ctx)
 
-获取可用模型列表。
+Get available model list.
 
 ```go
 func (c *Client) GetModels(ctx context.Context) (map[string]interface{}, error)
 ```
 
-### AsyncClient（异步客户端，推荐）
+### AsyncClient (Asynchronous Client, Recommended)
 
-#### 创建异步客户端
+#### Creating Async Client
 
 ```go
-// 使用默认配置（并发数10）
+// Use default configuration (concurrency 10)
 asyncClient := xiangxinai.NewAsyncClient("your-api-key")
 defer asyncClient.Close()
 
-// 使用自定义配置和并发数
+// Use custom configuration and concurrency
 config := &xiangxinai.ClientConfig{
     APIKey:     "your-api-key",
     BaseURL:    "https://api.xiangxinai.cn/v1",
     Timeout:    30,
     MaxRetries: 3,
 }
-asyncClient := xiangxinai.NewAsyncClientWithConfig(config, 20) // 最大并发数20
+asyncClient := xiangxinai.NewAsyncClientWithConfig(config, 20) // Max concurrency 20
 defer asyncClient.Close()
 ```
 
-#### 异步方法
+#### Async Methods
 
 ##### CheckPromptAsync(ctx, content)
 
-异步检测单个提示词的安全性。
+Asynchronously check safety of a single prompt.
 
 ```go
 func (ac *AsyncClient) CheckPromptAsync(ctx context.Context, content string) <-chan AsyncResult[*GuardrailResponse]
 func (ac *AsyncClient) CheckPromptWithModelAsync(ctx context.Context, content, model string) <-chan AsyncResult[*GuardrailResponse]
 ```
 
-**返回值:**
-- `<-chan AsyncResult[*GuardrailResponse]`: 异步结果通道
+**Return Value:**
+- `<-chan AsyncResult[*GuardrailResponse]`: Asynchronous result channel
 
-**示例:**
+**Example:**
 ```go
-resultChan := asyncClient.CheckPromptAsync(ctx, "用户问题")
+resultChan := asyncClient.CheckPromptAsync(ctx, "User question")
 select {
 case result := <-resultChan:
     if result.Error != nil {
-        log.Printf("检测失败: %v", result.Error)
+        log.Printf("Detection failed: %v", result.Error)
     } else {
-        fmt.Printf("检测完成: %s\n", result.Result.OverallRiskLevel)
+        fmt.Printf("Detection completed: %s\n", result.Result.OverallRiskLevel)
     }
 case <-ctx.Done():
-    fmt.Println("检测被取消")
+    fmt.Println("Detection cancelled")
 }
 ```
 
 ##### CheckConversationAsync(ctx, messages)
 
-异步检测对话上下文的安全性。
+Asynchronously check safety of conversation context.
 
 ```go
 func (ac *AsyncClient) CheckConversationAsync(ctx context.Context, messages []*Message) <-chan AsyncResult[*GuardrailResponse]
@@ -359,54 +363,54 @@ func (ac *AsyncClient) CheckConversationWithModelAsync(ctx context.Context, mess
 
 ##### BatchCheckPrompts(ctx, contents)
 
-批量异步检测提示词（高性能）。
+Batch asynchronous prompt checking (high performance).
 
 ```go
 func (ac *AsyncClient) BatchCheckPrompts(ctx context.Context, contents []string) <-chan AsyncResult[*GuardrailResponse]
 func (ac *AsyncClient) BatchCheckPromptsWithModel(ctx context.Context, contents []string, model string) <-chan AsyncResult[*GuardrailResponse]
 ```
 
-**示例:**
+**Example:**
 ```go
-contents := []string{"内容1", "内容2", "内容3"}
+contents := []string{"Content 1", "Content 2", "Content 3"}
 resultChan := asyncClient.BatchCheckPrompts(ctx, contents)
 for result := range resultChan {
     if result.Error != nil {
-        log.Printf("检测失败: %v", result.Error)
+        log.Printf("Detection failed: %v", result.Error)
     } else {
-        fmt.Printf("批量检测结果: %s\n", result.Result.OverallRiskLevel)
+        fmt.Printf("Batch detection result: %s\n", result.Result.OverallRiskLevel)
     }
 }
 ```
 
 ##### BatchCheckConversations(ctx, conversations)
 
-批量异步检测对话。
+Batch asynchronous conversation checking.
 
 ```go
 func (ac *AsyncClient) BatchCheckConversations(ctx context.Context, conversations [][]*Message) <-chan AsyncResult[*GuardrailResponse]
 func (ac *AsyncClient) BatchCheckConversationsWithModel(ctx context.Context, conversations [][]*Message, model string) <-chan AsyncResult[*GuardrailResponse]
 ```
 
-##### 并发控制方法
+##### Concurrency Control Methods
 
 ```go
-func (ac *AsyncClient) GetConcurrency() int        // 获取并发数限制
-func (ac *AsyncClient) GetActiveWorkers() int      // 获取当前活跃工作线程数
-func (ac *AsyncClient) Close() error               // 关闭异步客户端
+func (ac *AsyncClient) GetConcurrency() int        // Get concurrency limit
+func (ac *AsyncClient) GetActiveWorkers() int      // Get current active worker count
+func (ac *AsyncClient) Close() error               // Close async client
 ```
 
-### 数据结构
+### Data Structures
 
 #### Message
 
 ```go
 type Message struct {
     Role    string `json:"role"`    // "user", "system", "assistant"
-    Content string `json:"content"` // 消息内容
+    Content string `json:"content"` // Message content
 }
 
-// 创建新消息
+// Create new message
 func NewMessage(role, content string) *Message
 ```
 
@@ -414,27 +418,28 @@ func NewMessage(role, content string) *Message
 
 ```go
 type GuardrailResponse struct {
-    ID                string           `json:"id"`                  // 请求唯一标识
-    Result            *GuardrailResult `json:"result"`              // 检测结果详情
-    OverallRiskLevel  string           `json:"overall_risk_level"`  // 综合风险等级
-    SuggestAction     string           `json:"suggest_action"`      // 建议动作
-    SuggestAnswer     *string          `json:"suggest_answer"`      // 建议回答
+    ID                string           `json:"id"`                  // Request unique identifier
+    Result            *GuardrailResult `json:"result"`              // Detection result details
+    OverallRiskLevel  string           `json:"overall_risk_level"`  // Overall risk level
+    SuggestAction     string           `json:"suggest_action"`      // Suggested action
+    SuggestAnswer     *string          `json:"suggest_answer"`      // Suggested answer
+    Score             *float64         `json:"score"`               // Detection confidence score (added in v2.4.1)
 }
 
-// 便捷方法
-func (r *GuardrailResponse) IsSafe() bool              // 判断是否安全
-func (r *GuardrailResponse) IsBlocked() bool           // 判断是否被阻断
-func (r *GuardrailResponse) HasSubstitute() bool       // 判断是否有代答
-func (r *GuardrailResponse) GetAllCategories() []string // 获取所有风险类别
+// Convenience methods
+func (r *GuardrailResponse) IsSafe() bool              // Check if safe
+func (r *GuardrailResponse) IsBlocked() bool           // Check if blocked
+func (r *GuardrailResponse) HasSubstitute() bool       // Check if has replace answer
+func (r *GuardrailResponse) GetAllCategories() []string // Get all risk categories
 ```
 
 #### GuardrailResult
 
 ```go
 type GuardrailResult struct {
-    Compliance *ComplianceResult `json:"compliance"` // 合规检测结果
-    Security   *SecurityResult   `json:"security"`   // 安全检测结果
-    Data       *DataResult       `json:"data"`       // 数据防泄漏检测结果（v2.4.0新增）
+    Compliance *ComplianceResult `json:"compliance"` // Compliance detection result
+    Security   *SecurityResult   `json:"security"`   // Security detection result
+    Data       *DataResult       `json:"data"`       // Data leakage prevention detection result (added in v2.4.0)
 }
 ```
 
@@ -442,47 +447,47 @@ type GuardrailResult struct {
 
 ```go
 type ComplianceResult struct {
-    RiskLevel  string   `json:"risk_level"`  // 风险等级
-    Categories []string `json:"categories"`  // 风险类别列表
+    RiskLevel  string   `json:"risk_level"`  // Risk level
+    Categories []string `json:"categories"`  // Risk category list
 }
 
 type SecurityResult struct {
-    RiskLevel  string   `json:"risk_level"`  // 风险等级
-    Categories []string `json:"categories"`  // 风险类别列表
+    RiskLevel  string   `json:"risk_level"`  // Risk level
+    Categories []string `json:"categories"`  // Risk category list
 }
 
 type DataResult struct {
-    RiskLevel  string   `json:"risk_level"`  // 风险等级
-    Categories []string `json:"categories"`  // 检测到的敏感数据类型（v2.4.0新增）
+    RiskLevel  string   `json:"risk_level"`  // Risk level
+    Categories []string `json:"categories"`  // Detected sensitive data types (added in v2.4.0)
 }
 ```
 
-### 响应格式
+### Response Format
 
 ```go
 {
   "id": "guardrails-xxx",
   "result": {
     "compliance": {
-      "risk_level": "无风险",           // 无风险/低风险/中风险/高风险
-      "categories": []                  // 合规风险类别
+      "risk_level": "no_risk",           // no_risk/low_risk/medium_risk/high_risk
+      "categories": []                  // Compliance risk categories
     },
     "security": {
-      "risk_level": "无风险",           // 无风险/低风险/中风险/高风险
-      "categories": []                  // 安全风险类别
+      "risk_level": "no_risk",           // no_risk/low_risk/medium_risk/high_risk
+      "categories": []                  // Security risk categories
     },
     "data": {
-      "risk_level": "无风险",           // 无风险/低风险/中风险/高风险（v2.4.0新增）
-      "categories": []                  // 检测到的敏感数据类型（v2.4.0新增）
+      "risk_level": "no_risk",           // no_risk/low_risk/medium_risk/high_risk (added in v2.4.0)
+      "categories": []                  // Detected sensitive data types (added in v2.4.0)
     }
   },
-  "overall_risk_level": "无风险",       // 综合风险等级
-  "suggest_action": "通过",             // 通过/阻断/代答
-  "suggest_answer": null                // 建议回答（数据防泄漏时包含脱敏后内容）
+  "overall_risk_level": "no_risk",       // Overall risk level
+  "suggest_action": "pass",             // pass/reject/replace
+  "suggest_answer": null                // Suggested answer (contains desensitized content when data leakage prevention is triggered)
 }
 ```
 
-## 错误处理
+## Error Handling
 
 ```go
 import (
@@ -499,15 +504,15 @@ if err != nil {
     
     switch {
     case errors.As(err, &authErr):
-        fmt.Printf("认证失败，请检查API密钥: %v\n", err)
+        fmt.Printf("Authentication failed, please check API key: %v\n", err)
     case errors.As(err, &rateErr):
-        fmt.Printf("请求频率过高，请稍后重试: %v\n", err)
+        fmt.Printf("Request rate too high, please try again later: %v\n", err)
     case errors.As(err, &validationErr):
-        fmt.Printf("输入参数无效: %v\n", err)
+        fmt.Printf("Invalid input parameters: %v\n", err)
     case errors.As(err, &networkErr):
-        fmt.Printf("网络连接错误: %v\n", err)
+        fmt.Printf("Network connection error: %v\n", err)
     default:
-        fmt.Printf("API错误: %v\n", err)
+        fmt.Printf("API error: %v\n", err)
     }
     return
 }
@@ -515,18 +520,18 @@ if err != nil {
 fmt.Println(result)
 ```
 
-### 错误类型
+### Error Types
 
-- `XiangxinAIError` - 基础错误类
-- `AuthenticationError` - 认证失败
-- `RateLimitError` - 超出速率限制
-- `ValidationError` - 输入验证错误
-- `NetworkError` - 网络连接错误
-- `ServerError` - 服务器错误
+- `XiangxinAIError` - Base error class
+- `AuthenticationError` - Authentication failure
+- `RateLimitError` - Rate limit exceeded
+- `ValidationError` - Input validation error
+- `NetworkError` - Network connection error
+- `ServerError` - Server error
 
-## 使用场景
+## Usage Scenarios
 
-### 1. 内容审核
+### 1. Content Moderation
 
 ```go
 func moderateContent(client *xiangxinai.Client, userContent string) error {
@@ -538,7 +543,7 @@ func moderateContent(client *xiangxinai.Client, userContent string) error {
     
     if !result.IsSafe() {
         categories := result.GetAllCategories()
-        fmt.Printf("内容包含风险: %v\n", categories)
+        fmt.Printf("Content contains risks: %v\n", categories)
         return fmt.Errorf("content moderation failed: %s", result.OverallRiskLevel)
     }
     
@@ -546,7 +551,7 @@ func moderateContent(client *xiangxinai.Client, userContent string) error {
 }
 ```
 
-### 2. 对话系统防护
+### 2. Chat System Protection
 
 ```go
 func safeChatResponse(client *xiangxinai.Client, conversation []*xiangxinai.Message) (string, error) {
@@ -556,20 +561,20 @@ func safeChatResponse(client *xiangxinai.Client, conversation []*xiangxinai.Mess
         return "", err
     }
     
-    if result.SuggestAction == "代答" && result.SuggestAnswer != nil {
-        // 使用安全的代答内容
+    if result.SuggestAction == "replace" && result.SuggestAnswer != nil {
+        // Use safe replace answer
         return *result.SuggestAnswer, nil
     } else if result.IsBlocked() {
-        // 阻断不安全的对话
-        return "抱歉，我无法回答这个问题", nil
+        // Block unsafe conversation
+        return "Sorry, I cannot answer this question", nil
     }
     
-    // 对话安全，继续正常流程
+    // Conversation is safe, continue normal process
     return "", nil
 }
 ```
 
-### 3. 中间件集成
+### 3. Middleware Integration
 
 ```go
 package main
@@ -617,7 +622,7 @@ func GuardrailMiddleware(client *xiangxinai.Client) gin.HandlerFunc {
 }
 ```
 
-### 4. 并发检测
+### 4. Concurrent Detection
 
 ```go
 package main
@@ -641,7 +646,7 @@ func batchCheck(client *xiangxinai.Client, contents []string) {
             
             result, err := client.CheckPrompt(context.Background(), content)
             if err != nil {
-                fmt.Printf("检测失败: %v\n", err)
+                fmt.Printf("Detection failed: %v\n", err)
                 return
             }
             
@@ -653,13 +658,13 @@ func batchCheck(client *xiangxinai.Client, contents []string) {
     close(results)
     
     for result := range results {
-        fmt.Printf("内容: %s, 风险等级: %s\n", 
+        fmt.Printf("Content: %s, Risk Level: %s\n", 
             result.ID, result.OverallRiskLevel)
     }
 }
 ```
 
-### 5. 上下文取消
+### 5. Context Cancellation
 
 ```go
 func checkWithTimeout(client *xiangxinai.Client, content string, timeout time.Duration) {
@@ -669,62 +674,62 @@ func checkWithTimeout(client *xiangxinai.Client, content string, timeout time.Du
     result, err := client.CheckPrompt(ctx, content)
     if err != nil {
         if ctx.Err() == context.DeadlineExceeded {
-            fmt.Println("检测超时")
+            fmt.Println("Detection timeout")
         } else {
-            fmt.Printf("检测失败: %v\n", err)
+            fmt.Printf("Detection failed: %v\n", err)
         }
         return
     }
     
-    fmt.Printf("检测结果: %s\n", result.SuggestAction)
+    fmt.Printf("Detection result: %s\n", result.SuggestAction)
 }
 ```
 
-## 最佳实践
+## Best Practices
 
-1. **使用对话上下文检测**: 推荐使用 `CheckConversation` 而不是 `CheckPrompt`，因为上下文感知能提供更准确的检测结果。
+1. **Use Conversation Context Detection**: Recommend using `CheckConversation` instead of `CheckPrompt`, as context awareness provides more accurate detection results.
 
-2. **上下文管理**: 合理使用 `context.Context` 进行超时控制和取消操作。
+2. **Context Management**: Properly use `context.Context` for timeout control and cancellation operations.
 
-3. **错误处理**: 实现适当的错误处理和重试机制。
+3. **Error Handling**: Implement appropriate error handling and retry mechanisms.
 
-4. **客户端复用**: 在应用中复用同一个 `Client` 实例，避免频繁创建。
+4. **Client Reuse**: Reuse the same `Client` instance in your application, avoid frequent creation.
 
-5. **并发安全**: `Client` 是并发安全的，可以在多个 goroutine 中同时使用。
+5. **Concurrency Safety**: `Client` is concurrency-safe and can be used simultaneously in multiple goroutines.
 
-6. **资源管理**: `Client` 内部使用连接池，通常不需要手动关闭。
+6. **Resource Management**: `Client` internally uses connection pooling and typically doesn't require manual closing.
 
-## 性能考虑
+## Performance Considerations
 
-- 默认配置已针对大多数使用场景优化
-- 支持连接复用和keep-alive
-- 自动重试和指数退避
-- 上下文取消支持
+- Default configuration optimized for most usage scenarios
+- Supports connection reuse and keep-alive
+- Automatic retry and exponential backoff
+- Context cancellation support
 
-## 许可证
+## License
 
 Apache 2.0
 
-## 技术支持
+## Technical Support
 
-- 官网: https://xiangxinai.cn
-- 文档: https://docs.xiangxinai.cn
-- 问题反馈: https://github.com/xiangxinai/xiangxin-guardrails/issues
-- 邮箱: wanglei@xiangxinai.cn
+- Website: https://xiangxinai.cn
+- Documentation: https://docs.xiangxinai.cn
+- Issue Reporting: https://github.com/xiangxinai/xiangxin-guardrails/issues
+- Email: wanglei@xiangxinai.cn
 
-## 贡献指南
+## Contribution Guide
 
-欢迎提交 Issue 和 Pull Request！
+Welcome to submit Issues and Pull Requests!
 
-## 更新日志
+## Changelog
 ### v2.0.0
-- 新增 check_response_ctx(prompt, resposne)接口，与check_prompt(prmopt)配合使用，方便使用。
+- Added check_response_ctx(prompt, response) interface, to be used with check_prompt(prompt) for convenience.
 
 ### v1.1.1
-- 将最大检测内容长度从10000调整到1M
+- Adjusted maximum detection content length from 10000 to 1M
 
 ### v1.1.0
-- 初始版本发布
-- 支持提示词检测和对话上下文检测
-- 完整的错误处理和重试机制
-- 并发安全的客户端实现
+- Initial version release
+- Support prompt detection and conversation context detection
+- Complete error handling and retry mechanism
+- Concurrency-safe client implementation

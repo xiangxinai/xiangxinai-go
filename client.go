@@ -16,40 +16,40 @@ import (
 )
 
 const (
-	// DefaultBaseURL 默认API基础URL
+	// DefaultBaseURL Default API base URL
 	DefaultBaseURL = "https://api.xiangxinai.cn/v1"
-	// DefaultModel 默认模型名称
+	// DefaultModel Default model name
 	DefaultModel = "Xiangxin-Guardrails-Text"
-	// DefaultTimeout 默认请求超时时间（秒）
+	// DefaultTimeout Default request timeout (seconds)
 	DefaultTimeout = 30
-	// DefaultMaxRetries 默认最大重试次数
+	// DefaultMaxRetries Default maximum retry count
 	DefaultMaxRetries = 3
-	// UserAgent 用户代理
-	UserAgent = "xiangxinai-go/2.4.0"
+	// UserAgent User agent
+	UserAgent = "xiangxinai-go/2.6.2"
 )
 
-// Client 象信AI安全护栏客户端 - 基于LLM的上下文感知AI安全护栏
+// Client Xiangxin AI Guardrails client - Context-aware AI guardrail based on LLM
 //
-// 这个客户端提供了与象信AI安全护栏API交互的简单接口。
-// 护栏采用上下文感知技术，能够理解对话上下文进行安全检测。
+// This client provides a simple interface for interacting with the Xiangxin AI Guardrails API.
+// The guardrail uses context-aware technology to understand the conversation context for safety detection.
 //
-// 示例用法:
+// Example usage:
 //
 //	client := xiangxinai.NewClient("your-api-key")
 //	
-//	// 检测用户输入
+//	// Check user input
 //	result, err := client.CheckPrompt(context.Background(), "用户问题")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
 //
-//	// 检测输出内容（基于上下文）
+//	// Check output content (based on context)
 //	result, err := client.CheckResponseCtx(context.Background(), "用户问题", "助手回答")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
 //
-//	// 检测对话上下文
+//	// Check conversation context
 //	messages := []*xiangxinai.Message{
 //		xiangxinai.NewMessage("user", "问题"),
 //		xiangxinai.NewMessage("assistant", "回答"),
@@ -58,14 +58,14 @@ const (
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	fmt.Println(result.OverallRiskLevel) // "高风险/中风险/低风险/无风险"
-//	fmt.Println(result.SuggestAction)    // "通过/阻断/代答"
+//	fmt.Println(result.OverallRiskLevel) // "high_risk/medium_risk/low_risk/no_risk"
+//	fmt.Println(result.SuggestAction)    // "pass/reject/replace"
 type Client struct {
 	client     *resty.Client
 	maxRetries int
 }
 
-// NewClient 创建新的客户端，使用默认配置
+// NewClient Create new client, using default configuration
 func NewClient(apiKey string) *Client {
 	return NewClientWithConfig(&ClientConfig{
 		APIKey:     apiKey,
@@ -75,7 +75,7 @@ func NewClient(apiKey string) *Client {
 	})
 }
 
-// NewClientWithConfig 创建新的客户端，使用自定义配置
+// NewClientWithConfig Create new client, using custom configuration
 func NewClientWithConfig(config *ClientConfig) *Client {
 	if config.APIKey == "" {
 		panic("API key cannot be empty")
@@ -110,119 +110,125 @@ func NewClientWithConfig(config *ClientConfig) *Client {
 	}
 }
 
-// createSafeResponse 创建无风险的默认响应
+// createSafeResponse Create safe response
 func (c *Client) createSafeResponse() *GuardrailResponse {
 	return &GuardrailResponse{
 		ID: "guardrails-safe-default",
 		Result: &GuardrailResult{
 			Compliance: &ComplianceResult{
-				RiskLevel:  "无风险",
+				RiskLevel:  "no_risk",
 				Categories: []string{},
 			},
 			Security: &SecurityResult{
-				RiskLevel:  "无风险",
+				RiskLevel:  "no_risk",
 				Categories: []string{},
 			},
 		},
-		OverallRiskLevel: "无风险",
-		SuggestAction:    "通过",
+		OverallRiskLevel: "no_risk",
+		SuggestAction:    "pass",
 		SuggestAnswer:    nil,
 	}
 }
 
-// CheckPrompt 检测用户输入的安全性
+// CheckPrompt Check user input safety
 //
-// 参数:
-//   - ctx: 上下文
-//   - content: 要检测的用户输入内容
+// Parameters:
+//   - ctx: Context
+//   - content: User input content to check
 //
-// 返回值:
-//   - *GuardrailResponse: 检测结果，格式为:
+// Return value:
+//   - *GuardrailResponse: Detection result, format as:
 //     {
 //       "id": "guardrails-xxx",
 //       "result": {
 //         "compliance": {
-//           "risk_level": "高风险/中风险/低风险/无风险",
-//           "categories": ["暴力犯罪", "敏感政治话题"]
+//           "risk_level": "high_risk/medium_risk/low_risk/no_risk",
+//           "categories": ["violent crime", "sensitive political topics"]
 //         },
 //         "security": {
-//           "risk_level": "高风险/中风险/低风险/无风险",
-//           "categories": ["提示词攻击"]
+//           "risk_level": "high_risk/medium_risk/low_risk/no_risk",
+//           "categories": ["prompt attack"]
 //         }
 //       },
-//       "overall_risk_level": "高风险/中风险/低风险/无风险",
-//       "suggest_action": "通过/阻断/代答",
-//       "suggest_answer": "建议回答内容"
+//       "overall_risk_level": "high_risk/medium_risk/low_risk/no_risk",
+//       "suggest_action": "pass/reject/replace",
+//       "suggest_answer": "Suggested answer content"
 //     }
-//   - error: 错误信息
+//   - error: Error information
 //
-// 可能的错误类型:
-//   - ValidationError: 输入参数无效
-//   - AuthenticationError: 认证失败
-//   - RateLimitError: 超出速率限制
-//   - XiangxinAIError: 其他API错误
+// Possible error types:
+//   - ValidationError: Invalid input parameters
+//   - AuthenticationError: Authentication failed
+//   - RateLimitError: Exceeded rate limit
+//   - XiangxinAIError: Other API errors
 //
-// 示例:
+// Example:
 //
-//	result, err := client.CheckPrompt(ctx, "我想学习编程")
+//	result, err := client.CheckPrompt(ctx, "I want to learn programming")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	fmt.Println(result.OverallRiskLevel) // "无风险"
-//	fmt.Println(result.SuggestAction)    // "通过"
-//	fmt.Println(result.Result.Compliance.RiskLevel) // "无风险"
-func (c *Client) CheckPrompt(ctx context.Context, content string) (*GuardrailResponse, error) {
-	// 如果content是空字符串，直接返回无风险
+//	fmt.Println(result.OverallRiskLevel) // "no_risk"
+//	fmt.Println(result.SuggestAction)    // "pass"
+//	fmt.Println(result.Result.Compliance.RiskLevel) // "no_risk"
+func (c *Client) CheckPrompt(ctx context.Context, content string, userID ...string) (*GuardrailResponse, error) {
+	// If content is an empty string, return no risk
 	if strings.TrimSpace(content) == "" {
 		return c.createSafeResponse(), nil
 	}
 
-	requestData := map[string]string{
+	requestData := map[string]interface{}{
 		"input": strings.TrimSpace(content),
+	}
+
+	// Add optional userID parameter
+	if len(userID) > 0 && userID[0] != "" {
+		requestData["xxai_app_user_id"] = userID[0]
 	}
 
 	return c.makeRequestWithData(ctx, "POST", "/guardrails/input", requestData)
 }
 
-// CheckConversation 检测对话上下文的安全性 - 上下文感知检测
+// CheckConversation Check conversation context safety - context-aware detection
 //
-// 这是护栏的核心功能，能够理解完整的对话上下文进行安全检测。
-// 不是分别检测每条消息，而是分析整个对话的安全性。
+// This is the core functionality of the guardrail, capable of understanding the complete conversation context for safety detection.
+// Instead of checking each message separately, it analyzes the overall conversation safety.
 //
-// 参数:
-//   - ctx: 上下文
-//   - messages: 对话消息列表，包含用户和助手的完整对话，每个消息包含role('user'或'assistant')和content
+// Parameters:
+//   - ctx: Context
+//   - messages: Conversation message list, containing the complete conversation between user and assistant, each message contains role('user' or 'assistant') and content
+//   - userID: Optional parameter, tenant AI application user ID, used for user-level risk control and audit tracking
 //
-// 返回值:
-//   - *GuardrailResponse: 基于对话上下文的检测结果，格式与CheckPrompt相同
-//   - error: 错误信息
+// Return value:
+//   - *GuardrailResponse: Detection result based on conversation context, format as CheckPrompt
+//   - error: Error information
 //
-// 示例:
+// Example:
 //
-//	// 检测用户问题和助手回答的对话安全性
+//	// Check conversation safety between user question and assistant answer
 //	messages := []*xiangxinai.Message{
-//		xiangxinai.NewMessage("user", "用户问题"),
-//		xiangxinai.NewMessage("assistant", "助手回答"),
+//		xiangxinai.NewMessage("user", "User question"),
+//		xiangxinai.NewMessage("assistant", "Assistant answer"),
 //	}
-//	result, err := client.CheckConversation(ctx, messages)
+//	result, err := client.CheckConversation(ctx, messages, "user-123")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	fmt.Println(result.OverallRiskLevel) // "无风险"
-//	fmt.Println(result.SuggestAction)    // 基于对话上下文的建议
-func (c *Client) CheckConversation(ctx context.Context, messages []*Message) (*GuardrailResponse, error) {
-	return c.CheckConversationWithModel(ctx, messages, DefaultModel)
+//	fmt.Println(result.OverallRiskLevel) // "no_risk"
+//	fmt.Println(result.SuggestAction)    // "pass"
+func (c *Client) CheckConversation(ctx context.Context, messages []*Message, userID ...string) (*GuardrailResponse, error) {
+	return c.CheckConversationWithModel(ctx, messages, DefaultModel, userID...)
 }
 
-// CheckConversationWithModel 检测对话上下文的安全性，指定模型
-func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Message, model string) (*GuardrailResponse, error) {
+// CheckConversationWithModel Check conversation context safety, specify model
+func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Message, model string, userID ...string) (*GuardrailResponse, error) {
 	if len(messages) == 0 {
 		return nil, NewValidationError("messages cannot be empty")
 	}
 	
-	// 验证消息格式
+	// Validate message format
 	var validatedMessages []*Message
-	allEmpty := true // 标记是否所有content都为空
+	allEmpty := true // Mark whether all content are empty
 	
 	for _, msg := range messages {
 		if msg == nil {
@@ -238,10 +244,10 @@ func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Mes
 		}
 		
 		content := strings.TrimSpace(msg.Content)
-		// 检查是否有非空content
+		// Check if there is non-empty content
 		if content != "" {
 			allEmpty = false
-			// 只添加非空消息到validatedMessages
+			// Only add non-empty messages to validatedMessages
 			validatedMessages = append(validatedMessages, &Message{
 				Role:    msg.Role,
 				Content: content,
@@ -249,12 +255,12 @@ func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Mes
 		}
 	}
 	
-	// 如果所有messages的content都是空的，直接返回无风险
+	// If all messages' content are empty, return no risk
 	if allEmpty {
 		return c.createSafeResponse(), nil
 	}
 	
-	// 确保至少有一条消息
+	// Ensure at least one message
 	if len(validatedMessages) == 0 {
 		return c.createSafeResponse(), nil
 	}
@@ -263,56 +269,69 @@ func (c *Client) CheckConversationWithModel(ctx context.Context, messages []*Mes
 		Model:    model,
 		Messages: validatedMessages,
 	}
-	
+
+	// Add optional userID parameter
+	if len(userID) > 0 && userID[0] != "" {
+		if request.ExtraBody == nil {
+			request.ExtraBody = make(map[string]interface{})
+		}
+		request.ExtraBody["xxai_app_user_id"] = userID[0]
+	}
+
 	return c.makeRequest(ctx, "POST", "/guardrails", request)
 }
 
-// CheckResponseCtx 检测用户输入和模型输出的安全性 - 上下文感知检测
+// CheckResponseCtx Check user input and model output safety - context-aware detection
 //
-// 这是护栏的核心功能，能够理解用户输入和模型输出的上下文进行安全检测。
-// 护栏会基于用户问题的上下文来检测模型输出是否安全合规。
+// This is the core functionality of the guardrail, capable of understanding the user input and model output context for safety detection.
+// The guardrail will detect whether the model output is safe and compliant based on the user question context.
 //
-// 参数:
-//   - ctx: 上下文
-//   - prompt: 用户输入的文本内容，用于让护栏理解上下文语意
-//   - response: 模型输出的文本内容，实际检测对象
+// Parameters:
+//   - ctx: Context
+//   - prompt: User input text content, used to help the guardrail understand the context semantics
+//   - response: Model output text content, actual detection object
 //
-// 返回值:
-//   - *GuardrailResponse: 基于上下文的检测结果，格式与CheckPrompt相同
-//   - error: 错误信息
+// Return value:
+//   - *GuardrailResponse: Detection result based on context, format as CheckPrompt
+//   - error: Error information
 //
-// 可能的错误类型:
-//   - ValidationError: 输入参数无效
-//   - AuthenticationError: 认证失败
-//   - RateLimitError: 超出速率限制
-//   - XiangxinAIError: 其他API错误
+// Possible error types:
+//   - ValidationError: Invalid input parameters
+//   - AuthenticationError: Authentication failed
+//   - RateLimitError: Exceeded rate limit
+//   - XiangxinAIError: Other API errors
 //
-// 示例:
+// Example:
 //
-//	result, err := client.CheckResponseCtx(ctx, "教我做饭", "我可以教你做一些简单的家常菜")
+//	result, err := client.CheckResponseCtx(ctx, "I want to learn cooking", "I can teach you some simple home-cooked dishes")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	fmt.Println(result.OverallRiskLevel) // "无风险"
-//	fmt.Println(result.SuggestAction)    // "通过"
-func (c *Client) CheckResponseCtx(ctx context.Context, prompt, response string) (*GuardrailResponse, error) {
-	// 如果prompt和response都是空字符串，直接返回无风险
+//	fmt.Println(result.OverallRiskLevel) // "no_risk"
+//	fmt.Println(result.SuggestAction)    // "pass"
+func (c *Client) CheckResponseCtx(ctx context.Context, prompt, response string, userID ...string) (*GuardrailResponse, error) {
+	// If prompt and response are empty strings, return no risk
 	if strings.TrimSpace(prompt) == "" && strings.TrimSpace(response) == "" {
 		return c.createSafeResponse(), nil
 	}
 
-	requestData := map[string]string{
+	requestData := map[string]interface{}{
 		"input":  strings.TrimSpace(prompt),
 		"output": strings.TrimSpace(response),
+	}
+
+	// Add optional userID parameter
+	if len(userID) > 0 && userID[0] != "" {
+		requestData["xxai_app_user_id"] = userID[0]
 	}
 
 	return c.makeRequestWithData(ctx, "POST", "/guardrails/output", requestData)
 }
 
-// encodeBase64FromPath 将图片编码为base64格式
+// encodeBase64FromPath Encode image to base64 format
 func (c *Client) encodeBase64FromPath(imagePath string) (string, error) {
 	if strings.HasPrefix(imagePath, "http://") || strings.HasPrefix(imagePath, "https://") {
-		// 从URL获取图片
+		// Get image from URL
 		resp, err := http.Get(imagePath)
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch image from URL: %w", err)
@@ -331,7 +350,7 @@ func (c *Client) encodeBase64FromPath(imagePath string) (string, error) {
 		return base64.StdEncoding.EncodeToString(data), nil
 	}
 
-	// 从本地文件读取
+	// Read image from local file
 	data, err := os.ReadFile(imagePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read image file: %w", err)
@@ -340,43 +359,43 @@ func (c *Client) encodeBase64FromPath(imagePath string) (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
-// CheckPromptImage 检测文本提示词和图片的安全性 - 多模态检测
+// CheckPromptImage Check text prompt and image safety - multi-modal detection
 //
-// 结合文本语义和图片内容进行安全检测。
+// Combine text semantics and image content for safety detection.
 //
-// 参数:
-//   - ctx: 上下文
-//   - prompt: 文本提示词（可以为空）
-//   - image: 图片文件的本地路径或HTTP(S)链接（不能为空）
+// Parameters:
+//   - ctx: Context
+//   - prompt: Text prompt (can be empty)
+//   - image: Local path or HTTP(S) link of image file (cannot be empty)
 //
-// 返回值:
-//   - *GuardrailResponse: 检测结果
-//   - error: 错误信息
+// Return value:
+//   - *GuardrailResponse: Detection result
+//   - error: Error information
 //
-// 示例:
+// Example:
 //
-//	// 检测本地图片
-//	result, err := client.CheckPromptImage(ctx, "这个图片安全吗？", "/path/to/image.jpg")
+//	// Check local image
+//	result, err := client.CheckPromptImage(ctx, "Is this image safe?", "/path/to/image.jpg")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
-//	// 检测网络图片
+//	// Check network image
 //	result, err := client.CheckPromptImage(ctx, "", "https://example.com/image.jpg")
 //	if err != nil {
 //		log.Fatal(err)
 //	}
 //	fmt.Println(result.OverallRiskLevel)
-func (c *Client) CheckPromptImage(ctx context.Context, prompt, image string) (*GuardrailResponse, error) {
-	return c.CheckPromptImageWithModel(ctx, prompt, image, "Xiangxin-Guardrails-VL")
+func (c *Client) CheckPromptImage(ctx context.Context, prompt, image string, userID ...string) (*GuardrailResponse, error) {
+	return c.CheckPromptImageWithModel(ctx, prompt, image, "Xiangxin-Guardrails-VL", userID...)
 }
 
-// CheckPromptImageWithModel 检测文本提示词和图片的安全性，指定模型
-func (c *Client) CheckPromptImageWithModel(ctx context.Context, prompt, image, model string) (*GuardrailResponse, error) {
+// CheckPromptImageWithModel Check text prompt and image safety, specify model
+func (c *Client) CheckPromptImageWithModel(ctx context.Context, prompt, image, model string, userID ...string) (*GuardrailResponse, error) {
 	if image == "" {
 		return nil, NewValidationError("image path cannot be empty")
 	}
 
-	// 编码图片
+	// Encode image
 	imageBase64, err := c.encodeBase64FromPath(image)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -385,7 +404,7 @@ func (c *Client) CheckPromptImageWithModel(ctx context.Context, prompt, image, m
 		return nil, NewXiangxinAIError(fmt.Sprintf("failed to encode image: %v", err), err)
 	}
 
-	// 构建消息内容
+	// Build message content
 	content := []interface{}{}
 	if strings.TrimSpace(prompt) != "" {
 		content = append(content, map[string]string{
@@ -412,41 +431,49 @@ func (c *Client) CheckPromptImageWithModel(ctx context.Context, prompt, image, m
 		Messages: messages,
 	}
 
+	// Add optional userID parameter
+	if len(userID) > 0 && userID[0] != "" {
+		if request.ExtraBody == nil {
+			request.ExtraBody = make(map[string]interface{})
+		}
+		request.ExtraBody["xxai_app_user_id"] = userID[0]
+	}
+
 	return c.makeRequest(ctx, "POST", "/guardrails", request)
 }
 
-// CheckPromptImages 检测文本提示词和多张图片的安全性 - 多模态检测
+// CheckPromptImages Check text prompt and multiple images safety - multi-modal detection
 //
-// 结合文本语义和多张图片内容进行安全检测。
+// Combine text semantics and multiple image content for safety detection.
 //
-// 参数:
-//   - ctx: 上下文
-//   - prompt: 文本提示词（可以为空）
-//   - images: 图片文件的本地路径或HTTP(S)链接列表（不能为空）
+// Parameters:
+//   - ctx: Context
+//   - prompt: Text prompt (can be empty)
+//   - images: Local path or HTTP(S) link list of image file (cannot be empty)
 //
-// 返回值:
-//   - *GuardrailResponse: 检测结果
-//   - error: 错误信息
+// Return value:
+//   - *GuardrailResponse: Detection result
+//   - error: Error information
 //
-// 示例:
+// Example:
 //
 //	images := []string{"/path/to/image1.jpg", "https://example.com/image2.jpg"}
-//	result, err := client.CheckPromptImages(ctx, "这些图片安全吗？", images)
+//	result, err := client.CheckPromptImages(ctx, "Are these images safe?", images)
 //	if err != nil {
 //		log.Fatal(err)
 //	}
 //	fmt.Println(result.OverallRiskLevel)
-func (c *Client) CheckPromptImages(ctx context.Context, prompt string, images []string) (*GuardrailResponse, error) {
-	return c.CheckPromptImagesWithModel(ctx, prompt, images, "Xiangxin-Guardrails-VL")
+func (c *Client) CheckPromptImages(ctx context.Context, prompt string, images []string, userID ...string) (*GuardrailResponse, error) {
+	return c.CheckPromptImagesWithModel(ctx, prompt, images, "Xiangxin-Guardrails-VL", userID...)
 }
 
-// CheckPromptImagesWithModel 检测文本提示词和多张图片的安全性，指定模型
-func (c *Client) CheckPromptImagesWithModel(ctx context.Context, prompt string, images []string, model string) (*GuardrailResponse, error) {
+// CheckPromptImagesWithModel Check text prompt and multiple images safety, specify model
+func (c *Client) CheckPromptImagesWithModel(ctx context.Context, prompt string, images []string, model string, userID ...string) (*GuardrailResponse, error) {
 	if len(images) == 0 {
 		return nil, NewValidationError("images list cannot be empty")
 	}
 
-	// 构建消息内容
+	// Build message content
 	content := []interface{}{}
 	if strings.TrimSpace(prompt) != "" {
 		content = append(content, map[string]string{
@@ -455,7 +482,7 @@ func (c *Client) CheckPromptImagesWithModel(ctx context.Context, prompt string, 
 		})
 	}
 
-	// 编码所有图片
+	// Encode all images
 	for _, imagePath := range images {
 		imageBase64, err := c.encodeBase64FromPath(imagePath)
 		if err != nil {
@@ -485,10 +512,18 @@ func (c *Client) CheckPromptImagesWithModel(ctx context.Context, prompt string, 
 		Messages: messages,
 	}
 
+	// Add optional userID parameter
+	if len(userID) > 0 && userID[0] != "" {
+		if request.ExtraBody == nil {
+			request.ExtraBody = make(map[string]interface{})
+		}
+		request.ExtraBody["xxai_app_user_id"] = userID[0]
+	}
+
 	return c.makeRequest(ctx, "POST", "/guardrails", request)
 }
 
-// HealthCheck 检查API服务健康状态
+// HealthCheck Check API service health status
 func (c *Client) HealthCheck(ctx context.Context) (map[string]interface{}, error) {
 	resp, err := c.client.R().
 		SetContext(ctx).
@@ -510,7 +545,7 @@ func (c *Client) HealthCheck(ctx context.Context) (map[string]interface{}, error
 	return result, nil
 }
 
-// GetModels 获取可用模型列表
+// GetModels Get available model list
 func (c *Client) GetModels(ctx context.Context) (map[string]interface{}, error) {
 	resp, err := c.client.R().
 		SetContext(ctx).
@@ -532,12 +567,12 @@ func (c *Client) GetModels(ctx context.Context) (map[string]interface{}, error) 
 	return result, nil
 }
 
-// makeRequest 发送HTTP请求
+// makeRequest Send HTTP request
 func (c *Client) makeRequest(ctx context.Context, method, endpoint string, requestData *GuardrailRequest) (*GuardrailResponse, error) {
 	return c.makeRequestWithData(ctx, method, endpoint, requestData)
 }
 
-// makeRequestWithData 发送HTTP请求（通用版本）
+// makeRequestWithData Send HTTP request (generic version)
 func (c *Client) makeRequestWithData(ctx context.Context, method, endpoint string, requestData interface{}) (*GuardrailResponse, error) {
 	var lastErr error
 	
@@ -564,7 +599,7 @@ func (c *Client) makeRequestWithData(ctx context.Context, method, endpoint strin
 			return &result, nil
 		}
 		
-		// 处理HTTP错误状态码
+		// Handle HTTP error status code
 		switch resp.StatusCode() {
 		case 401:
 			return nil, NewAuthenticationError("invalid API key")
@@ -580,7 +615,7 @@ func (c *Client) makeRequestWithData(ctx context.Context, method, endpoint strin
 			return nil, NewValidationError(fmt.Sprintf("validation error: %s", detail))
 		case 429:
 			if attempt < c.maxRetries {
-				// 指数退避重试
+				// Exponential backoff retry
 				backoff := c.calculateBackoff(attempt)
 				c.sleep(ctx, backoff)
 				continue
@@ -606,7 +641,7 @@ func (c *Client) makeRequestWithData(ctx context.Context, method, endpoint strin
 	return nil, lastErr
 }
 
-// handleErrorResponse 处理错误响应
+// handleErrorResponse Handle error response
 func (c *Client) handleErrorResponse(resp *resty.Response) error {
 	switch resp.StatusCode() {
 	case 401:
@@ -635,14 +670,14 @@ func (c *Client) handleErrorResponse(resp *resty.Response) error {
 	}
 }
 
-// calculateBackoff 计算指数退避等待时间
+// calculateBackoff Calculate exponential backoff waiting time
 func (c *Client) calculateBackoff(attempt int) time.Duration {
 	base := time.Second
 	backoff := time.Duration(math.Pow(2, float64(attempt))) * base
 	return backoff + time.Second
 }
 
-// sleep 等待指定时间，支持上下文取消
+// sleep Wait for specified time, support context cancellation
 func (c *Client) sleep(ctx context.Context, duration time.Duration) {
 	select {
 	case <-ctx.Done():

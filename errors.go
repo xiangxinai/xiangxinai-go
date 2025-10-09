@@ -2,7 +2,7 @@ package xiangxinai
 
 import "fmt"
 
-// XiangxinAIError 象信AI安全护栏基础错误类
+// XiangxinAIError Xiangxin AI Guardrails base error class
 type XiangxinAIError struct {
 	Message string
 	Cause   error
@@ -19,7 +19,7 @@ func (e *XiangxinAIError) Unwrap() error {
 	return e.Cause
 }
 
-// NewXiangxinAIError 创建新的XiangxinAI错误
+// NewXiangxinAIError Create new XiangxinAI error
 func NewXiangxinAIError(message string, cause error) *XiangxinAIError {
 	return &XiangxinAIError{
 		Message: message,
@@ -27,60 +27,60 @@ func NewXiangxinAIError(message string, cause error) *XiangxinAIError {
 	}
 }
 
-// AuthenticationError 认证错误
+// AuthenticationError Authentication error
 type AuthenticationError struct {
 	*XiangxinAIError
 }
 
-// NewAuthenticationError 创建认证错误
+// NewAuthenticationError Create authentication error
 func NewAuthenticationError(message string) *AuthenticationError {
 	return &AuthenticationError{
 		XiangxinAIError: &XiangxinAIError{Message: message},
 	}
 }
 
-// RateLimitError 速率限制错误
+// RateLimitError Rate limit error
 type RateLimitError struct {
 	*XiangxinAIError
 }
 
-// NewRateLimitError 创建速率限制错误
+// NewRateLimitError Create rate limit error
 func NewRateLimitError(message string) *RateLimitError {
 	return &RateLimitError{
 		XiangxinAIError: &XiangxinAIError{Message: message},
 	}
 }
 
-// ValidationError 输入验证错误
+// ValidationError Input validation error
 type ValidationError struct {
 	*XiangxinAIError
 }
 
-// NewValidationError 创建验证错误
+// NewValidationError Create validation error
 func NewValidationError(message string) *ValidationError {
 	return &ValidationError{
 		XiangxinAIError: &XiangxinAIError{Message: message},
 	}
 }
 
-// NetworkError 网络错误
+// NetworkError Network error
 type NetworkError struct {
 	*XiangxinAIError
 }
 
-// NewNetworkError 创建网络错误
+// NewNetworkError Create network error
 func NewNetworkError(message string, cause error) *NetworkError {
 	return &NetworkError{
 		XiangxinAIError: &XiangxinAIError{Message: message, Cause: cause},
 	}
 }
 
-// ServerError 服务器错误
+// ServerError Server error
 type ServerError struct {
 	*XiangxinAIError
 }
 
-// NewServerError 创建服务器错误
+// NewServerError Create server error
 func NewServerError(message string) *ServerError {
 	return &ServerError{
 		XiangxinAIError: &XiangxinAIError{Message: message},
